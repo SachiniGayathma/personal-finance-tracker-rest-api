@@ -5,6 +5,11 @@ const transactionSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   category: { type: String, required: true },
   type: { type: String, enum: ["income", "expense"], required: true },
+  budgetId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Budget',
+    required: true, // Link to the budget
+  },
   date: { type: Date, required: true },
   tags :[{type : String }],
 

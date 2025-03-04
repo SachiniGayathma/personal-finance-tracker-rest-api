@@ -1,7 +1,8 @@
 const Transaction = require('../models/TransactionSchema');
+const Budget = require('../models/BudgetSchema');
 
 exports.createTransaction = async (req, res) => {
-  const { amount, category, type, date, isRecurring, recurrencePattern, endDate,tags} = req.body;
+  const { amount, category, type,budgetId, date, isRecurring, recurrencePattern, endDate,tags} = req.body;
   
   // Assuming the user's ID is available from the authenticated request (after login)
   const userId = req.user.id;
@@ -13,6 +14,7 @@ exports.createTransaction = async (req, res) => {
       category,
       type,
       date,
+      budgetId,
       isRecurring,
       recurrencePattern,
       endDate,
@@ -23,8 +25,20 @@ exports.createTransaction = async (req, res) => {
     if (!transaction) {
       return res.status(404).json({ message: "Error occurred while saving the transaction" });
     }
+
+    const budget = await Budget.findById(budgetId);
+    if (type === 'expense') {
+      budget.spentAmount += amount;
+    } else if (type === 'income') {
+      budget.spentAmount -= amount;
+    }
+
+    await budget.save();
     
     res.status(201).json({ message: "Transaction saved successfully", transaction });
+
+  
+
   } catch (err) {
     res.status(500).json({ message: "Error creating transaction", error: err });
   }
