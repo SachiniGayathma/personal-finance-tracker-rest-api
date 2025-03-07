@@ -10,6 +10,8 @@ const userRouter = require('./routes/userRoutes');
 const transactionRouter = require('./routes/transactionRoutes');
 const notificationRoutes = require("./routes/notificationRoutes");
 const budgerRoutes = require('./routes/budgetRoute');
+const goalRoute = require('./routes/goalRoute');
+
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -27,6 +29,7 @@ app.use('/api/auth', userRouter);
 app.use('/api/transactions',transactionRouter);
 app.use("/api/notifications", notificationRoutes); 
 app.use('/api/budgets', budgerRoutes);
+app.use('/api/goals',goalRoute);
 
 
 mongoose.connect(process.env.MONGODB_URL,{useNewUrlParser : true , useUnifiedTopology: true})
