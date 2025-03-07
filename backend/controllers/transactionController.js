@@ -1,16 +1,18 @@
 const Transaction = require('../models/TransactionSchema');
 const Budget = require('../models/BudgetSchema');
 const Goal = require('../models/GoalSchema');
+const sendNotification = require('../utils/mailer');
+const User= require('../models/User');
+const moment = require('moment');
 
 exports.createTransaction = async (req, res) => {
-  const { amount, category, type,budgetId, date,goalId,savingValue, isRecurring, recurrencePattern, endDate,tags} = req.body;
-  
-  // Assuming the user's ID is available from the authenticated request (after login)
+  const { amount, category, type, budgetId, date, goalId, savingValue, isRecurring, recurrencePattern, endDate, tags } = req.body;
+
   const userId = req.user.id;
 
   try {
     const newTransaction = new Transaction({
-      userId, // associate the transaction with the logged-in user
+      userId,
       amount,
       category,
       type,
@@ -21,7 +23,7 @@ exports.createTransaction = async (req, res) => {
       isRecurring,
       recurrencePattern,
       endDate,
-      tags : tags || []
+      tags: tags || []
     });
 
     const transaction = await newTransaction.save();
@@ -29,30 +31,34 @@ exports.createTransaction = async (req, res) => {
       return res.status(404).json({ message: "Error occurred while saving the transaction" });
     }
 
-    const budget = await Budget.findById(budgetId);
-    if (type === 'expense') {
-      budget.spentAmount += amount;
-    } else if (type === 'income') {
-      budget.spentAmount -= amount;
+    // Check if budgetId is provided, if so update the budget
+    if (budgetId) {
+      const budget = await Budget.findById(budgetId);
+      if (!budget) return res.status(404).json({ message: "Budget not found" });
+
+      if (type === 'expense') {
+        budget.spentAmount += amount;
+      } else if (type === 'income') {
+        budget.spentAmount -= amount;
+      }
+      await budget.save();
     }
 
-    await budget.save();
+    // Check if goalId is provided, if so update the goal
+    if (goalId) {
+      const goal = await Goal.findById(goalId);
+      if (!goal) return res.status(404).json({ message: "Goal not found" });
 
-    const goal = await Goal.findById(goalId);
-
-    if(!goal) return res.status(404).json({message : "Goal is Not Found"})
-    if(type == 'income'){
-
-      goal.currentSavings += amount * 1 /savingValue;
+      if (type === 'income') {
+        goal.currentSavings += amount / savingValue;
+      }
+      await goal.save();
     }
 
-    await goal.save();
-    
     res.status(201).json({ message: "Transaction saved successfully", transaction });
 
-  
-
   } catch (err) {
+    console.error(err); // Log the error for debugging purposes
     res.status(500).json({ message: "Error creating transaction", error: err });
   }
 };
@@ -184,4 +190,63 @@ exports.deleteTransaction = async (req, res) =>{
   res.status(201).json({message : "Transaction" + transactionId + "Deleted Successfully"});
 
 
+};
+
+exports.checkRecurringTransactions = async (req,res) => {
+  try {
+    // Get current date
+    const currentDate = moment().startOf('day'); // Start of today to avoid time difference issues
+
+    // Find all recurring transactions
+    const recurringTransactions = await Transaction.find({
+      isRecurring: true,
+      endDate: { $gte: currentDate }, // Ensure the recurring transaction has not ended
+    });
+
+    if (!recurringTransactions || recurringTransactions.length === 0) {
+      console.log('No upcoming or missed recurring transactions.');
+      return;
+    }
+
+    // Loop through all recurring transactions to check if they're due
+    for (const transaction of recurringTransactions) {
+      const { recurrencePattern, endDate, nextOccurrence, amount, category, type } = transaction;
+
+      // Calculate the next expected occurrence based on the recurrence pattern
+      let nextOccurrenceDate = moment(transaction.date);
+
+      if (nextOccurrence) {
+        nextOccurrenceDate.add(1, recurrencePattern); // Add based on recurrence pattern (daily, weekly, monthly)
+      }
+
+      // Check if the next occurrence is today or has been missed
+      if (nextOccurrenceDate.isSameOrBefore(currentDate)) {
+        // If the next occurrence is today or has passed, send a notification
+
+        // Fetch user data from the User collection
+       const user = await User.findById(transaction.userId);
+        if (!user) {
+          console.log('User not found');
+          continue; // Skip this transaction if the user is not found
+        }
+
+        const email = user.email;
+        const subject = `Upcoming Recurring Transaction: ${category}`;
+        const message = `Your recurring transaction for ${category} is due today. Amount: ${amount} (${type}).`;
+
+        // Send email notification
+       const status =
+        await sendNotification(email, subject, message);
+        if(!status) return res.status(404).json({message : "Error Occured In Sending Notification"});
+        res.status(201).json({message : "Email Sent Successfully"});
+        
+
+        // Update the next occurrence date for future reference
+        transaction.nextOccurrence = nextOccurrenceDate;
+        await transaction.save();
+      }
+    }
+  } catch (err) {
+    console.error('Error checking recurring transactions:', err);
+  }
 };

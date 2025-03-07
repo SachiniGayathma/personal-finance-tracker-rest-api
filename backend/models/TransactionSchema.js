@@ -8,7 +8,8 @@ const transactionSchema = new mongoose.Schema({
   budgetId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Budget',
-    required: true, // Link to the budget
+    default: null
+    
   },
   date: { type: Date, required: true },
   tags :[{type : String }],
@@ -17,7 +18,8 @@ const transactionSchema = new mongoose.Schema({
 
     type : mongoose.Schema.Types.ObjectId,
     ref : "Goal",
-    required : true
+    default: null
+    
 
 
   },
