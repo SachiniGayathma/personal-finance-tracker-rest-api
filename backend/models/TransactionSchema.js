@@ -13,6 +13,22 @@ const transactionSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   tags :[{type : String }],
 
+  goalId : {
+
+    type : mongoose.Schema.Types.ObjectId,
+    ref : "Goal",
+    required : true
+
+
+  },
+
+  savingValue :{
+
+    type : Number,
+    required : true
+
+  },
+
   // Recurring transaction fields
   isRecurring: { type: Boolean, default: false },
   recurrencePattern: { 

@@ -1,8 +1,9 @@
 const Transaction = require('../models/TransactionSchema');
 const Budget = require('../models/BudgetSchema');
+const Goal = require('../models/GoalSchema');
 
 exports.createTransaction = async (req, res) => {
-  const { amount, category, type,budgetId, date, isRecurring, recurrencePattern, endDate,tags} = req.body;
+  const { amount, category, type,budgetId, date,goalId,savingValue, isRecurring, recurrencePattern, endDate,tags} = req.body;
   
   // Assuming the user's ID is available from the authenticated request (after login)
   const userId = req.user.id;
@@ -15,6 +16,8 @@ exports.createTransaction = async (req, res) => {
       type,
       date,
       budgetId,
+      goalId,
+      savingValue,
       isRecurring,
       recurrencePattern,
       endDate,
@@ -34,6 +37,16 @@ exports.createTransaction = async (req, res) => {
     }
 
     await budget.save();
+
+    const goal = await Goal.findById(goalId);
+
+    if(!goal) return res.status(404).json({message : "Goal is Not Found"})
+    if(type == 'income'){
+
+      goal.currentSavings += amount * 1 /savingValue;
+    }
+
+    await goal.save();
     
     res.status(201).json({ message: "Transaction saved successfully", transaction });
 
