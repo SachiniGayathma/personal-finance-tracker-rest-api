@@ -16,6 +16,6 @@ router.get('/viewTransaction/:id',authMiddleWare,getSingleTransaction);
 router.get('/transactions/filter',authMiddleWare,filterTransactionsByTags);
 router.put('/updateTransaction/:id',authMiddleWare,updateTransaction);
 router.delete('/deleteTransaction/:id', authMiddleWare,deleteTransaction);
-router.get('/checkRecurringTransaction',checkRecurringTransactions);
+/*router.get('/checkRecurringTransaction',checkRecurringTransactions);*/
 
 module.exports = router;

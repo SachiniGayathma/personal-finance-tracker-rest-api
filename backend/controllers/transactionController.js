@@ -1,9 +1,7 @@
 const Transaction = require('../models/TransactionSchema');
 const Budget = require('../models/BudgetSchema');
 const Goal = require('../models/GoalSchema');
-const sendNotification = require('../utils/mailer');
-const User= require('../models/User');
-const moment = require('moment');
+
 
 exports.createTransaction = async (req, res) => {
   const { amount, category, type,  date, savingValue, isRecurring, recurrencePattern, endDate, tags } = req.body;
@@ -217,7 +215,7 @@ exports.deleteTransaction = async (req, res) =>{
 
 };
 
-exports.checkRecurringTransactions = async (req,res) => {
+/*exports.checkRecurringTransactions = async (req,res) => {
   try {
     // Get current date
     const currentDate = moment().startOf('day'); // Start of today to avoid time difference issues
@@ -274,4 +272,4 @@ exports.checkRecurringTransactions = async (req,res) => {
   } catch (err) {
     console.error('Error checking recurring transactions:', err);
   }
-};
+};*/

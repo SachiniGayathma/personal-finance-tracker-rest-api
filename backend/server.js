@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const cron =require('./utils/cronJobs');
+
 
 
 require('dotenv').config();
@@ -12,6 +12,7 @@ const transactionRouter = require('./routes/transactionRoutes');
 const notificationRoutes = require("./routes/notificationRoutes");
 const budgerRoutes = require('./routes/budgetRoute');
 const goalRoute = require('./routes/goalRoute');
+const reportRoute = require('./routes/reportRoute');
 
 
 
@@ -34,7 +35,7 @@ app.use('/api/transactions',transactionRouter);
 app.use("/api/notifications", notificationRoutes); 
 app.use('/api/budgets', budgerRoutes);
 app.use('/api/goals',goalRoute);
-
+app.use('/api/reports',reportRoute);
 /*app.get("/api/runcron", async (req, res) => {
     try {
         await cron.runCronJob(); // Call the cron job function correctly
@@ -56,6 +57,8 @@ mongoose.connect(process.env.MONGODB_URL,{useNewUrlParser : true , useUnifiedTop
 });
 
 const PORT = 8000;
+
+
 
 app.listen(PORT, ()=>{
 
