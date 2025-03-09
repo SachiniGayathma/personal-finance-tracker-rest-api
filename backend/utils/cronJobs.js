@@ -2,85 +2,192 @@ const cron = require("node-cron");
 const sendNotification = require("./mailer");
 const Transaction = require("../models/TransactionSchema");
 const User = require("../models/User");
+const Budget = require('../models/BudgetSchema');
 const moment = require("moment");
+const GoalSchema = require("../models/GoalSchema");
 
 const checkRecurringTransactions = async () => {
   try {
     const today = moment().startOf("day").toDate();
+    const transactions = await Transaction.find({});
+    for(const currentTransaction of transactions){
 
-    // Find all users
-    const users = await User.find();
+     const transactionDate = currentTransaction.date;
+     const nextRecurrencePattern= currentTransaction.recurrencePattern;
+     const endDate = currentTransaction.endDate;
+     let nextRecurrenceDate;
+     let remainingDates;
+
+     if (endDate && moment(endDate).isBefore(today)) {
+      // Skip processing if the end date has passed
+      continue;
+    }
+     
+
+     if(nextRecurrencePattern === "daily"){
+
+      nextRecurrenceDate = moment(transactionDate).add(1,"days").toDate();
+
+     }else if(nextRecurrencePattern === "weekly"){
+
+      nextRecurrenceDate = moment(transactionDate).add(7,"days").toDate();
+     }else if(nextRecurrencePattern === "monthly"){
+
+      nextRecurrenceDate = moment(transactionDate).add(1, "month").toDate();
+     }
     
-    for (const user of users) {
-      const userId = user._id;
+     remainingDates = moment(nextRecurrenceDate).diff(today,"days");
 
-      // 1. Calculate total income for the selected period
-      const incomeTransactions = await Transaction.find({
-        userId,
-        type: "income",
-        date: { $gte: moment(today).startOf("month").toDate() },
-      });
+     if(remainingDates <= 2){
 
-      const totalIncome = incomeTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+      const user = await User.findOne({ _id: currentTransaction.userId });
 
-      // 2. Calculate total expenses (including recurring ones)
-      const expenses = await Transaction.find({
-        userId,
-        type: "expense",
-        date: { $gte: moment(today).startOf("month").toDate() },
-      });
+      if(user && user.email){
 
-      const totalExpenses = expenses.reduce((sum, tx) => sum + tx.amount, 0);
+        sendNotification(user.email, `Upcomming Transaction ${currentTransaction._id}`, `You Have 2 Days Left For The Upcomming Transaction ${currentTransaction.amount}`);
 
-      // 3. Calculate total goal savings
-      const goalSavings = await Transaction.find({
-        userId,
-        goalId: { $exists: true }, // Only transactions linked to a goal
-      });
-
-      const totalGoalSavings = goalSavings.reduce((sum, tx) => sum + tx.savingValue, 0);
-
-      // 4. Calculate remaining balance
-      const remainingBalance = totalIncome - (totalExpenses + totalGoalSavings);
-
-      // 5. Find recurring transactions due today
-      const recurringExpenses = await Transaction.find({
-        userId,
-        isRecurring: true,
-        type: "expense",
-        nextDueDate: { $lte: today }
-      });
-
-      for (const transaction of recurringExpenses) {
-        if (remainingBalance < transaction.amount) {
-          // Not enough funds, send an email alert
-          await sendNotification(
-            user.email,
-            `Insufficient Funds for ${transaction.category}`,
-            `Your recurring expense of ${transaction.amount} cannot be processed due to insufficient balance.`
-          );
-        } else {
-          // Deduct the amount and update nextDueDate
-          let newNextDueDate;
-          if (transaction.recurrencePattern === "daily") {
-            newNextDueDate = moment(transaction.nextDueDate).add(1, "day").toDate();
-          } else if (transaction.recurrencePattern === "weekly") {
-            newNextDueDate = moment(transaction.nextDueDate).add(1, "week").toDate();
-          } else if (transaction.recurrencePattern === "monthly") {
-            newNextDueDate = moment(transaction.nextDueDate).add(1, "month").toDate();
-          }
-
-          await Transaction.findByIdAndUpdate(transaction._id, { nextDueDate: newNextDueDate });
-        }
+        console.log(
+          `✅ Email sent to ${user.email} for transaction ID: ${currentTransaction._id}`
+        );
+      } else {
+        console.log(
+          `⚠️ User email not found for transaction ID: ${currentTransaction._id}`
+        );
       }
+     
+
+     }else if(remainingDates == 0 ){
+
+      const user = await User.findOne({ _id: currentTransaction.userId });
+
+      if(user && user.email){
+
+        sendNotification(user.email, `Today Transaction ${currentTransaction._id}`, `Happening Today ${currentTransaction.amount} of Recurring Transaction`);
+
+        console.log(
+          `✅ Email sent to ${user.email} for transaction ID: ${currentTransaction._id}`
+        );
+      } else {
+        console.log(
+          `⚠️ User email not found for transaction ID: ${currentTransaction._id}`
+        );
+      }
+
+
+     }else if(remainingDates < 0 ){
+
+
+      const user = await User.findOne({ _id: currentTransaction.userId });
+
+      if(user && user.email){
+
+        sendNotification(user.email, ` Transaction ${currentTransaction._id} Overdue`, ` ${currentTransaction.amount} of Recurring Transaction is Over due`);
+
+        console.log(
+          `✅ Email sent to ${user.email} for transaction ID: ${currentTransaction._id}`
+        );
+      } else {
+        console.log(
+          `⚠️ User email not found for transaction ID: ${currentTransaction._id}`
+        );
+      }
+
+     }
+
+
     }
 
-    console.log("Cron job executed successfully!");
+
+
+
+
+    console.log("Cron job executed successfully for Recurring Transaction! ");
   } catch (error) {
     console.error("Error in cron job:", error);
   }
 };
 
+const checkBudgets = async() =>{
+
+  try{
+
+    const today = moment().startOf("day").toDate();
+    const budgets = await Budget.find({});
+
+    for(const rollBudgets of budgets){
+
+      const spentAmount = rollBudgets.spentAmount;
+      const budgetAmount = rollBudgets.amount;
+
+      if(spentAmount ===  budgetAmount * 80/100 ){
+
+        
+      const user = await User.findOne({ _id: rollBudgets.userId });
+      if(user && user.email){
+
+        sendNotification(user.email,`⚠️ Budget Nearing Warning ${rollBudgets._id}`, `Dear User \nPlease be kind enough to note that you have been reached 90% of the budget${rollBudgets._id} by ${today}\n Category : ${rollBudgets.category}\n Budget Amount :${rollBudgets.amount}\n Spent Amount : ${rollBudgets.spentAmount}\n Balance : ${rollBudgets.amount - rollBudgets.spentAmount}`);
+        console.log(
+          `✅ Email sent to ${user.email} for transaction ID: ${rollBudgets._id}`
+        );
+      } else {
+        console.log(
+          `⚠️ User email not found for transaction ID: ${rollBudgets._id}`
+        );
+      }
+        
+      }else if(spentAmount > budgetAmount){
 
 
-/*module.exports = { runCronJob: checkRecurringTransactions };*/
+        const user = await User.findOne({ _id: rollBudgets.userId });
+      if(user && user.email){
+
+        sendNotification(user.email,`⚠️ Budget Exceeding Warning ${rollBudgets._id}`, `Dear User \nPlease be kind enough to note that you have been exceeded the budget${rollBudgets._id} by ${today}\n Category : ${rollBudgets.category}\n Budget Amount :${rollBudgets.amount}\n Spent Amount : ${rollBudgets.spentAmount}\n Exceeded By: ${rollBudgets.spentAmount- rollBudgets.amount }`);
+        console.log(
+          `✅ Email sent to ${user.email} for transaction ID: ${rollBudgets._id}`
+        );
+      } else {
+        console.log(
+          `⚠️ User email not found for transaction ID: ${rollBudgets._id}`
+        );
+      }
+
+      }
+
+
+    }
+
+
+    console.log("Cron job executed successfully for Budget Tracking! ");
+  }catch(err){
+
+    console.log(err);
+  }
+
+  
+
+
+
+
+
+};
+
+const goalTracker = async()=>{
+
+  try{
+
+    const goal =await GoalSchema.find({});
+    
+
+
+  }catch(err){
+
+
+  }
+
+
+}
+
+cron.schedule("0 3 18 * * * ",checkRecurringTransactions);
+cron.schedule("0 8 * * * * *", checkBudgets);
+
+

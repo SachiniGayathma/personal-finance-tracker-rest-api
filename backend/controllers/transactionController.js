@@ -6,7 +6,7 @@ const User= require('../models/User');
 const moment = require('moment');
 
 exports.createTransaction = async (req, res) => {
-  const { amount, category, type, budgetId, date, goalId, savingValue, isRecurring, recurrencePattern, endDate, tags } = req.body;
+  const { amount, category, type,  date, savingValue, isRecurring, recurrencePattern, endDate, tags } = req.body;
 
   const userId = req.user.id;
 
@@ -17,9 +17,7 @@ exports.createTransaction = async (req, res) => {
       category,
       type,
       date,
-      budgetId,
-      goalId,
-      savingValue,
+      savingValue ,
       isRecurring,
       recurrencePattern,
       endDate,
@@ -31,8 +29,25 @@ exports.createTransaction = async (req, res) => {
       return res.status(404).json({ message: "Error occurred while saving the transaction" });
     }
 
+
+    const budgets = await Budget.find({userId});
+
+    for(const processBudgets of budgets){
+
+      const budget = await Budget.findById(processBudgets._id);
+      if(tags.some(tag => budget.category.includes(tag)) && type == 'expense'){
+
+        budget.spentAmount +=  amount;
+        await budget.save();
+
+
+      }
+
+
+    }
+
     // Check if budgetId is provided, if so update the budget
-    if (budgetId) {
+   /* if (budgetId) {
       const budget = await Budget.findById(budgetId);
       if (!budget) return res.status(404).json({ message: "Budget not found" });
 
@@ -42,17 +57,27 @@ exports.createTransaction = async (req, res) => {
         budget.spentAmount -= amount;
       }
       await budget.save();
-    }
+    }*/
 
-    // Check if goalId is provided, if so update the goal
-    if (goalId) {
-      const goal = await Goal.findById(goalId);
-      if (!goal) return res.status(404).json({ message: "Goal not found" });
+    const goals = await Goal.find({userId});
+   
+    if (goals && type == 'income') {
 
-      if (type === 'income') {
-        goal.currentSavings += amount / savingValue;
+      for(const updatingGoals of goals){
+
+        const goalStart = await Goal.findById(updatingGoals._id);
+        
+        if (goalStart) {
+          // Update currentSavings correctly
+          goalStart.currentSavings += amount / (savingValue / goals.length);
+          
+          // Save the updated goal
+          await goalStart.save();
+        }
+      
+
       }
-      await goal.save();
+      
     }
 
     res.status(201).json({ message: "Transaction saved successfully", transaction });
@@ -69,9 +94,9 @@ exports.getllTransactions = async (req,res)=>{
 
     const userId = req.user.id;
 
-    const transaction = await Transaction.find({userId});
+    const transaction = await Transaction.find({});
     if(!transaction) return res.status(404).json({message : "Transactions Are Not Available"});
-    res.status(201).json({message : `Your Transaction History as Below/n" ${transaction}`});
+    res.status(201).json({message : 'Transaction History as Below/n',transaction});
 
 
   }catch(err){

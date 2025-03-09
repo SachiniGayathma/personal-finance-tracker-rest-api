@@ -5,29 +5,14 @@ const transactionSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   category: { type: String, required: true },
   type: { type: String, enum: ["income", "expense"], required: true },
-  budgetId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Budget',
-    default: null
-    
-  },
   date: { type: Date, required: true },
   tags :[{type : String }],
 
-  goalId : {
-
-    type : mongoose.Schema.Types.ObjectId,
-    ref : "Goal",
-    default: null
-    
-
-
-  },
 
   savingValue :{
 
     type : Number,
-    required : true
+    default :0
 
   },
 

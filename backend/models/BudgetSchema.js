@@ -13,6 +13,7 @@ const BudgetSchema = new mongoose.Schema({
     category : {
 
         type : String,
+        enum : ["Food","Electricity Bill", "Water Bill","Phone Bill", "Clothing", "Accessories", "Vacation"],
         required: true
     },
 

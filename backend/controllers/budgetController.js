@@ -1,5 +1,7 @@
 
 const budgetSchema = require('../models/BudgetSchema');
+const sendNotification = require('../utils/mailer');
+const User = require('../models/User');
 
 
 
@@ -98,8 +100,34 @@ exports.viewAllBudgets = async (req, res) => {
       res.status(404).json(err);
     }
 
-    
-
-
-
   }
+
+  exports.checkBudgetFlow = async (req, res) => {
+    try {
+        // Fetch all budgets that are within the current date range
+        const budgets = await budgetSchema.find({ 
+            endDate: { $gte: new Date() }, 
+            startDate: { $lte: new Date() }
+        }).populate('userId');  // Populate user details
+
+        // Loop through each budget and check if they are nearing or exceeding
+        for (let budget of budgets) {
+            const { userId, amount, spentAmount } = budget;
+            const user = userId; // You can also use user details if needed
+
+            if (spentAmount >= amount) {
+                // Budget has been exceeded
+                await sendNotification(user.email,"Budget Exceeded" ,`Your budget of ${amount} has been exceeded.`);
+            } else if (spentAmount >= amount * 0.9) {
+                // Budget is nearing, spent amount is over 90%
+                await sendNotification(user.email,"Budget Is Nearing" ,`You are nearing your budget limit of ${amount}. You have spent ${spentAmount}.`);
+            }
+        }
+
+        res.status(200).json({ message: 'Budget check completed.' });
+    } catch (error) {
+        console.error(`Error checking budget flow: ${error}`);
+        res.status(500).json({ message: 'Error checking budget flow', error });
+    }
+};
+

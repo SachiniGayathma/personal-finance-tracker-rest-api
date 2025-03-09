@@ -60,5 +60,6 @@ const PORT = 8000;
 app.listen(PORT, ()=>{
 
     console.log(`Application run on seerver port ${PORT}`);
+    require('./utils/cronJobs');
 });
 
