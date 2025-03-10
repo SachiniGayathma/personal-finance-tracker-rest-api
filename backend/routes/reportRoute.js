@@ -3,6 +3,6 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const express = require('express');
 const router = express.Router();
 
-router.get('/generateReport',authMiddleware,getFinancialPdf);
+router.get('/generateReport/filter',authMiddleware,getFinancialPdf);
 
 module.exports = router;

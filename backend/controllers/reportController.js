@@ -1,18 +1,18 @@
-// const Transaction = require('../models/TransactionSchema'); // Removed as you're not using transactions
-const generateFinancialReport = require('../utils/pdfGenerator'); // Path to your pdf generator utility
-const sendNotificationWithPDF = require('../utils/mailer'); // Path to your mailer utility
+const Transaction = require('../models/TransactionSchema'); 
+const generateFinancialReport = require('../utils/pdfGenerator'); 
+const sendNotificationWithPDF = require('../utils/mailer'); 
 const User = require('../models/User');
 
 exports.getFinancialPdf = async (req, res) => {
-    const userId = req.user.id; // Assuming user id is available from the authentication middleware
+    const userId = req.user.id; 
+    const {startDate = "", endDate = "",category = "",tags =[]} = req.query;
+    const reportType = {startDate,endDate,category,tags}
+
 
     try {
-        // Fetch the report type from the query parameters
-        
-
-        // You would probably need to fetch user info from the database
-        // Assuming you have a User model and the userId is valid
-        const user = await User.findById(userId); // Assuming a 'User' model exists
+     
+        const user = await User.findById(userId); 
+        const transactions = await Transaction.find({userId});
        
 
         if (!user) {
@@ -20,7 +20,7 @@ exports.getFinancialPdf = async (req, res) => {
         }
 
         // Generate the PDF report using the user info and the report type
-        const filePath = await generateFinancialReport(user, "monthly");
+        const filePath = await generateFinancialReport(user,transactions, reportType);
 
         // Send the generated report via email
         await sendNotificationWithPDF(user.email, 'Your Financial Report', 'Please find your financial report attached.', filePath);

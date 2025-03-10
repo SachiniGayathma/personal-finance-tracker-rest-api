@@ -171,23 +171,9 @@ const checkBudgets = async() =>{
 
 };
 
-const goalTracker = async()=>{
-
-  try{
-
-    const goal =await GoalSchema.find({});
-    
 
 
-  }catch(err){
-
-
-  }
-
-
-}
-
-cron.schedule("0 3 18 * * * ",checkRecurringTransactions);
-cron.schedule("0 8 * * * * *", checkBudgets);
+cron.schedule("0 11 11 * * * * ",checkRecurringTransactions);
+cron.schedule("0 27 11 * * * *", checkBudgets);
 
 
