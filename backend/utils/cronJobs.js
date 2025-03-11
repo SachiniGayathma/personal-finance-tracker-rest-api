@@ -174,6 +174,6 @@ const checkBudgets = async() =>{
 
 
 cron.schedule("0 11 11 * * * * ",checkRecurringTransactions);
-cron.schedule("0 27 11 * * * *", checkBudgets);
+cron.schedule("0 25 8 * * * *", checkBudgets);
 
 
