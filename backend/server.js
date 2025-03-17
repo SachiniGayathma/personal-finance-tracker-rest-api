@@ -1,6 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const YAML = require("yamljs");
+const swaggerUi = require("swagger-ui-express");
+
+// Load the Swagger documentation file
+const swaggerDocument = YAML.load("./swagger.yaml");
 
 
 
@@ -36,6 +41,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use('/api/budgets', budgerRoutes);
 app.use('/api/goals',goalRoute);
 app.use('/api/reports',reportRoute);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 /*app.get("/api/runcron", async (req, res) => {
     try {
         await cron.runCronJob(); // Call the cron job function correctly

@@ -2,14 +2,17 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
+const axios = require('axios');
 
 const generateFinancialReport = async (user, transactions, reportType) => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         try {
             if (!user._id) {
                 return reject(new Error("User information is required"));
             }
 
+            const targetCurrencyType = reportType.currency;
+            
             const doc = new PDFDocument({ margin: 30, size: 'A4' });
             const filePath = path.join(__dirname, `../reports/${user._id}_${reportType.startDate}_${reportType.endDate}.pdf`);
             const stream = fs.createWriteStream(filePath);
@@ -54,6 +57,8 @@ const generateFinancialReport = async (user, transactions, reportType) => {
 
                 let totalAmount = 0;
                 let rowCounter = 0;
+                let convertedAmount;
+               
 
                 for (const transaction of transactions) {
                     if (moment(transaction.date).isBetween(reportType.startDate, reportType.endDate, null, '[]') && transaction.category === reportType.category) {
@@ -64,12 +69,23 @@ const generateFinancialReport = async (user, transactions, reportType) => {
                         }
 
                         doc.text(transaction._id.toString().slice(-6), startX, startY, { width: 60, align: 'left' });
-                        doc.text(`$${transaction.amount.toFixed(2)}`, startX + 80, startY, { width: 80, align: 'right' });
+                        doc.text(`${transaction.currency}${transaction.amount.toFixed(2)}`, startX + 80, startY, { width: 80, align: 'right' });
                         doc.text(transaction.category, startX + 180, startY, { width: 100, align: 'left' });
                         doc.text(transaction.type, startX + 290, startY, { width: 80, align: 'left' });
                         doc.text(moment(transaction.date).format("YYYY-MM-DD"), startX + 390, startY, { width: 120, align: 'left' });
+                         
+                        if (targetCurrencyType && transaction.currency !== targetCurrencyType) {
+                            const rate = await getExchangeRate(transaction.currency, targetCurrencyType); // ⬅️ Await here
+                            convertedAmount = transaction.amount * rate;
+                            totalAmount += convertedAmount;
+                        }else{
 
-                        totalAmount += transaction.amount;
+                            totalAmount += transaction.amount;
+                        }
+
+
+                        
+
                         rowCounter++;
                         startY += 20;
                     }
@@ -77,7 +93,7 @@ const generateFinancialReport = async (user, transactions, reportType) => {
 
                 // Summary Section
                 doc.moveDown(1).fontSize(12).font("Helvetica-Bold");
-                doc.text("Total Transactions: " + totalAmount.toFixed(2), 50, startY + 10);
+                doc.text("Total Transactions: " + targetCurrencyType +totalAmount.toFixed(2), 50, startY + 10);
 
 
             }
@@ -94,6 +110,22 @@ const generateFinancialReport = async (user, transactions, reportType) => {
             reject(error);
         }
     });
+};
+
+
+const getExchangeRate = async (baseCurrency, targetCurrency) => {
+    try {
+        const response = await axios.get(`https://v6.exchangerate-api.com/v6/103d44474dedc3e28d34c894/latest/${baseCurrency}`);
+        if (response.data && response.data.conversion_rates) {
+            return response.data.conversion_rates[targetCurrency] || 1; // Return 1 if not found
+        } else {
+            console.error("Invalid response from exchange rate API");
+            return 1; // Fallback rate
+        }
+    } catch (error) {
+        console.error('Error fetching exchange rates:', error.message);
+        return 1; // Default fallback rate
+    }
 };
 
 module.exports = generateFinancialReport;

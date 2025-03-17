@@ -44,7 +44,7 @@ const checkRecurringTransactions = async () => {
 
       if(user && user.email){
 
-        sendNotification(user.email, `Upcomming Transaction ${currentTransaction._id}`, `You Have 2 Days Left For The Upcomming Transaction ${currentTransaction.amount}`);
+        sendNotification(user.email, `Upcomming Transaction ${currentTransaction._id}`, `You Have ${remainingDates} Days Left For The Upcomming Transaction ${currentTransaction.amount}`);
 
         console.log(
           `✅ Email sent to ${user.email} for transaction ID: ${currentTransaction._id}`
@@ -119,13 +119,13 @@ const checkBudgets = async() =>{
       const spentAmount = rollBudgets.spentAmount;
       const budgetAmount = rollBudgets.amount;
 
-      if(spentAmount ===  budgetAmount * 80/100 ){
+      if(spentAmount > budgetAmount * 70/100  && !spentAmount > budgetAmount){
 
         
       const user = await User.findOne({ _id: rollBudgets.userId });
       if(user && user.email){
 
-        sendNotification(user.email,`⚠️ Budget Nearing Warning ${rollBudgets._id}`, `Dear User \nPlease be kind enough to note that you have been reached 90% of the budget${rollBudgets._id} by ${today}\n Category : ${rollBudgets.category}\n Budget Amount :${rollBudgets.amount}\n Spent Amount : ${rollBudgets.spentAmount}\n Balance : ${rollBudgets.amount - rollBudgets.spentAmount}`);
+        sendNotification(user.email,`⚠️ Budget Nearing Warning ${rollBudgets._id}`, `Dear User \nPlease be kind enough to note that you have been reached ${spentAmount * 100 /budgetAmount} % of the budget${rollBudgets._id} by ${today}\n Category : ${rollBudgets.category}\n Budget Amount :${rollBudgets.amount}\n Spent Amount : ${rollBudgets.spentAmount}\n Balance : ${rollBudgets.amount - rollBudgets.spentAmount}`);
         console.log(
           `✅ Email sent to ${user.email} for transaction ID: ${rollBudgets._id}`
         );
@@ -173,7 +173,7 @@ const checkBudgets = async() =>{
 
 
 
-cron.schedule("0 11 11 * * * * ",checkRecurringTransactions);
-cron.schedule("0 25 8 * * * *", checkBudgets);
+cron.schedule("0 4 11 * * * * ",checkRecurringTransactions);
+cron.schedule("0 32 11 * * * *", checkBudgets);
 
 

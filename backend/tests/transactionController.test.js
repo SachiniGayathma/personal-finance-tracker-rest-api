@@ -22,7 +22,7 @@ describe("Transaction Api's Integration Testings", () => {
     }
 
     // Create a test user and generate a JWT token
-    const user = new User({ userName: "testUser", email: "testuser@example.com", password: "password123", role: "user" });
+    const user = new User({ userName: "testUser",country : "Sri Lanka" ,email: "testuser@example.com", password: "password123", role: "user" });
     await user.save();
 
     authToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
@@ -56,7 +56,35 @@ describe("Transaction Api's Integration Testings", () => {
     expect(res.body.transaction).toBeDefined();
   });
 
+  it("Should Return User Registred Successfully Message", async()=>{
+  
+          const newUser = {
+  
+              userName : "Sachcha2025",
+              country : "Austraila",
+              email : "testUser2@example.com",
+              password : "67890123S",
+              role : "user"
+  
+          };
+  
+
+          const res = await request(app)
+          .post('/api/auth/register')
+          .send(newUser);
+
+          console.log(res.body);
+  
+          expect(res.statusCode).toBe(201);
+         
+          
+        })
+
+        
+
 
 });
+
+
 
 //Integrating Test

@@ -5,8 +5,8 @@ const User = require('../models/User');
 
 exports.getFinancialPdf = async (req, res) => {
     const userId = req.user.id; 
-    const {startDate = "", endDate = "",category = "",tags =[]} = req.query;
-    const reportType = {startDate,endDate,category,tags}
+    const {startDate = "", endDate = "",category = "",tags =[], currency = ""} = req.query;
+    const reportType = {startDate,endDate,category,tags,currency}
 
 
     try {

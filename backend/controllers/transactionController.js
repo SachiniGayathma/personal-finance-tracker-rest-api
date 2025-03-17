@@ -1,17 +1,30 @@
 const Transaction = require('../models/TransactionSchema');
 const Budget = require('../models/BudgetSchema');
 const Goal = require('../models/GoalSchema');
+const User = require('../models/User');
+const axios = require('axios');
+
 
 
 exports.createTransaction = async (req, res) => {
-  const { amount, category, type,  date, savingValue, isRecurring, recurrencePattern, endDate, tags } = req.body;
+  let { amount,currency, category, type,  date, savingValue, isRecurring, recurrencePattern, endDate, tags } = req.body;
 
   const userId = req.user.id;
+  const user = await User.findById(userId);
+
+  if(!user) return res.status(400).json({message : "User Not Found"});
+  const country = user.country;
+  const response = await axios.get(`https://restcountries.com/v3.1/name/${country}`);
+  const countryData = response.data[0];  // Assuming the response will return an array of countries
+    if (countryData && countryData.currencies) {
+      currency = Object.keys(countryData.currencies)[0];  // Get the first currency in case there are multiple
+    }
 
   try {
     const newTransaction = new Transaction({
       userId,
       amount,
+      currency,
       category,
       type,
       date,
@@ -33,7 +46,7 @@ exports.createTransaction = async (req, res) => {
     for(const processBudgets of budgets){
 
       const budget = await Budget.findById(processBudgets._id);
-      if(tags.some(tag => budget.category.includes(tag)) && type == 'expense'){
+      if(tags.some(tag => budget.category.includes(tag)) && type == 'expense' || category == budget.category){
 
         budget.spentAmount +=  amount;
         await budget.save();
@@ -67,7 +80,7 @@ exports.createTransaction = async (req, res) => {
         
         if (goalStart) {
           // Update currentSavings correctly
-          goalStart.currentSavings += amount / (savingValue / goals.length);
+          goalStart.currentSavings += (amount / savingValue) / goals.length;
           
           // Save the updated goal
           await goalStart.save();

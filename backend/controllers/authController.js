@@ -5,12 +5,19 @@ const bcrypt = require("bcryptjs");
 // Register User
 exports.registerUser = async (req, res) => {
   try {
-    const {userName, email, password, role } = req.body;
+    const {userName,country, email, password, role } = req.body;
     let user = await User.findOne({ email });
+    if(!country) return res.status(400).json({message : "Sorry We are unable to proceed with your request please enter the region"});
 
+    if (password.length < 8 || !/[A-Z]/.test(password)) {
+      return res.status(400).json({ message: "Enter at least 8 characters with one uppercase letter" });
+    }
+    
     if (user) return res.status(400).json({ message: "Email already exists" });
 
-    user = new User({ userName, email, password, role });
+    if(!role) return res.status(400).json({message : "Enter the User Role "})
+
+    user = new User({ userName, country ,email, password, role });
     await user.save();
 
     res.status(201).json({ message: "User registered successfully" });

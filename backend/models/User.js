@@ -10,6 +10,14 @@ const UserSchema = new mongoose.Schema({
         required : true
     },
 
+    country : {
+
+        type : String,
+        required : true
+
+
+    },
+
     email : {
 
         type : String,
